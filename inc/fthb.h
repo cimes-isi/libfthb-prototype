@@ -63,6 +63,14 @@ void fthb_put_hb(fthb* hb);
 unsigned int fthb_get_timeout(const fthb* hb);
 
 /**
+ * Get if the heartbeat is still valid.
+ *
+ * @param hb A heartbeat pointer
+ * @return 1 if still tracking, 0 if not
+ */
+int fthb_is_tracking(const fthb* hb);
+
+/**
  * Read the heartbeat counter.
  *
  * @param hb A heartbeat pointer

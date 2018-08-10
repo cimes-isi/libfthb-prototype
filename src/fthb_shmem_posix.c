@@ -42,7 +42,7 @@ fthb* fthb_create(int uid, unsigned int timeout) {
     close(shm_fd);
     return NULL;
   }
-  // seems to be OK to close the fd after mmap completes
+  // man munmap: "closing the file descriptor does not unmap the region"
   close(shm_fd);
   hb->timeout = timeout;
   hb->counter = 0;
@@ -57,7 +57,6 @@ int fthb_destroy(fthb* hb) {
   // mark for destruction (so HB monitors know to stop monitoring and detach)
   hb->attached = 0;
   munmap(hb, PAGE_SIZE());
-  // close(shm_fd);
   return shm_unlink(name);
 }
 
@@ -85,6 +84,10 @@ void fthb_put_hb(fthb* hb) {
 
 unsigned int fthb_get_timeout(const fthb* hb) {
   return hb->timeout;
+}
+
+int fthb_is_tracking(const fthb* hb) {
+  return hb->attached;
 }
 
 unsigned int fthb_read_counter(fthb* hb) {

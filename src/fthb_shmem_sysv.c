@@ -19,7 +19,8 @@ typedef struct fthb {
 } fthb;
 
 static key_t uid_to_key(int uid) {
-  return ftok("fthb", uid);
+  // return ftok("fthb", uid);
+  return (key_t) uid;
 }
 
 fthb* fthb_create(int uid, unsigned int timeout) {
@@ -47,13 +48,18 @@ static int uid_to_shmid(int uid) {
 }
 
 int fthb_destroy(fthb* hb) {
+  int ret = 0;
   int shmid = uid_to_shmid(hb->uid);
   // mark for destruction (so HB monitors know to stop monitoring and detach)
   hb->attached = 0;
-  if (shmdt(hb) || shmctl(shmid, IPC_RMID, NULL)) {
-    return -1;
+  if (shmdt(hb)) {
+    ret = -1;
   }
-  return 0;
+  // run shmctl even if shmdt fails
+  if (shmctl(shmid, IPC_RMID, NULL)) {
+    ret = -1;
+  }
+  return ret;
 }
 
 int fthb_issue(fthb* hb) {
@@ -75,6 +81,10 @@ void fthb_put_hb(fthb* hb) {
 
 unsigned int fthb_get_timeout(const fthb* hb) {
   return hb->timeout;
+}
+
+int fthb_is_tracking(const fthb* hb) {
+  return hb->attached;
 }
 
 unsigned int fthb_read_counter(fthb* hb) {

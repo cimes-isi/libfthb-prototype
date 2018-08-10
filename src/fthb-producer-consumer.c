@@ -14,8 +14,8 @@
 #include "fthb.h"
 
 #define MAX_UIDS 1024
-#define TIMEOUT_US 100000
-#define NUM_HBS 20
+#define TIMEOUT_US 1000000
+#define NUM_HBS 10
 
 static void* heartbeat_provider_thread(void* arg) {
   int uid = *((int*) arg);
@@ -54,9 +54,13 @@ static void* heartbeat_consumer_thread(void* arg) {
   timeout_us = fthb_get_timeout(hb);
   for (i = 0; ; i++) {
     counter_last = counter;
-    usleep(timeout_us * 2);
-    // TODO: Need to know when heartbeat is no longer active rather than just counting them - register a callback? Poll?
     if (counter == NUM_HBS) {
+      break;
+    }
+    usleep(timeout_us * 2);
+    if (!fthb_is_tracking(hb)) {
+      // producer is finished
+      printf("Heartbeat unregistered for: %d\n", uid);
       break;
     }
     counter = fthb_read_counter(hb);
@@ -73,34 +77,33 @@ static void* heartbeat_consumer_thread(void* arg) {
 
 int main(int argc, char** argv) {
   int uids[MAX_UIDS] = { 0 };
-  pthread_t provider_threads[MAX_UIDS];
-  pthread_t consumer_threads[MAX_UIDS];
+  pthread_t threads[MAX_UIDS];
+  void* (*fn) (void*);
+  unsigned int n;
   unsigned int i;
-  for (i = 1; i < argc; i++) {
+  if (argc < 3) {
+    fprintf(stderr, "Usage: %s 0|1 UID [UID]...\n", argv[0]);
+    fprintf(stderr, "0 to be provider, 1 to be consumer\n");
+    return EINVAL;
+  }
+  fn = atoi(argv[1]) ? heartbeat_consumer_thread : heartbeat_provider_thread;
+  for (i = 2, n = 0; i < argc; i++, n++) {
     if (i >= MAX_UIDS) {
       fprintf(stderr, "Too many UIDs, max=%u\n", MAX_UIDS);
       return -1;
     }
-    uids[i - 1] = atoi(argv[i]);
+    uids[n] = atoi(argv[i]);
   }
-  for (i = 0; i < argc - 1; i++) {
-    errno = pthread_create(&provider_threads[i], NULL, heartbeat_provider_thread, &uids[i]);
+  for (i = 0; i < n; i++) {
+    errno = pthread_create(&threads[i], NULL, fn, &uids[i]);
     if (errno) {
-      perror("pthread_create: provider");
-    }
-    errno = pthread_create(&consumer_threads[i], NULL, heartbeat_consumer_thread, &uids[i]);
-    if (errno) {
-      perror("pthread_create: consumer");
+      perror("pthread_create");
     }
   }
-  for (i = 0; i < argc - 1; i++) {
-    errno = pthread_join(consumer_threads[i], NULL);
+  for (i = 0; i < n; i++) {
+    errno = pthread_join(threads[i], NULL);
     if (errno) {
-      perror("pthread_join: consumer");
-    }
-    errno = pthread_join(provider_threads[i], NULL);
-    if (errno) {
-      perror("pthread_join: provider");
+      perror("pthread_join");
     }
   }
   return 0;

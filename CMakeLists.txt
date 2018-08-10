@@ -40,14 +40,11 @@ macro(LIB_CONFIGURE name)
   target_link_libraries(${name}-test ${name})
   add_test(${name}-test ${EXECUTABLE_OUTPUT_PATH}/${name}-test)
   # Other executable
-  add_executable(${name}-monitor src/fthb-monitor.c)
-  target_link_libraries(${name}-monitor ${name})
+  add_executable(${name}-producer-consumer src/fthb-producer-consumer.c)
+  target_link_libraries(${name}-producer-consumer ${name})
   # Install lib
   install(TARGETS ${name} DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endmacro(LIB_CONFIGURE)
-
-add_library(fthb_array src/fthb_array.c)
-LIB_CONFIGURE(fthb_array)
 
 add_library(fthb_shmem_posix src/fthb_shmem_posix.c)
 LIB_CONFIGURE(fthb_shmem_posix)
