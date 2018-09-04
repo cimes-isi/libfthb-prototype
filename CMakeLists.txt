@@ -26,9 +26,10 @@ enable_testing()
 # Libraries
 
 macro(LIB_CONFIGURE name)
+  target_link_libraries(${name} ${CMAKE_THREAD_LIBS_INIT})
   # Link against librt if needed
   if(LIBRT)
-    target_link_libraries(${name} ${CMAKE_THREAD_LIBS_INIT} ${LIBRT})
+    target_link_libraries(${name} ${LIBRT})
   endif()
   # Set shared object version properties
   if(BUILD_SHARED_LIBS)
